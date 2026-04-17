@@ -35,7 +35,7 @@
   transition:
     border-color 0.3s,
     box-shadow 0.3s;
-   -webkit-appearance: none;
+  -webkit-appearance: none;
   -moz-appearance: none;
 }
 
@@ -71,6 +71,8 @@
 /* General Styling */
 body {
   font-family: "Inter", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   background-color: #0c152a;
   color: #ffffff;
   display: flex;
@@ -107,6 +109,10 @@ body {
   color: #b0e0e6;
   border-bottom: 2px solid #2e88a3;
   padding-bottom: 0.5rem;
+}
+
+.category-group {
+  margin-bottom: 1.5rem;
 }
 
 /* Form Elements */
@@ -216,10 +222,12 @@ body {
   user-select: none;
 }
 
-.trailer-item:hover {
-  border-color: #92d0ff;
-  box-shadow: 0 0 15px rgba(146, 208, 255, 0.4);
-  cursor: pointer;
+@media (hover: hover) {
+  .trailer-item:hover {
+    border-color: #92d0ff;
+    box-shadow: 0 0 15px rgba(146, 208, 255, 0.4);
+    cursor: pointer;
+  }
 }
 
 .trailer-item:active {
@@ -322,6 +330,22 @@ body {
   color: #92d0ff;
   font-weight: bold;
   display: none;
+}
+
+/* In your Styles.css */
+.trailer-item.no-fuel-needed {
+  border-left: 5px solid #28a745; /* A standard green color */
+  background-color: rgba(
+    40,
+    167,
+    69,
+    0.1
+  ); /* Optional: subtle green background */
+}
+
+/* If you want the text or specific elements green */
+.no-fuel-needed .trailer-number {
+  color: #28a745;
 }
 
 .needs-fuel {

@@ -3,7 +3,7 @@ import { getAuth, signInAnonymously } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAxHIhsDl7uR2lmcmj9EWy8epX-1uBmrsw", // Replace with your actual API Key
+  apiKey: import.meta.env.VITE_API_KEY,
   authDomain: "yard-walk.firebaseapp.com", // Replace with your actual Auth Domain
   projectId: "yard-walk", // Replace with your actual Project ID
   storageBucket: "yard-walk.firebasestorage.app", // Replace with your actual Storage Bucket

@@ -9,13 +9,13 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { db, initAuth } from "./firebase"; // Ensure firebase.js is in /src/
-import StatsHeader from "./components/StatsHeader";
 import TrailerForm from "./components/TrailerForm";
-import TrailerList from "./components/TrailerList";
+import Trailers from "./components/Trailers";
 import trailerLogo from "./assets/icons8-trailer-96.png";
 import prwsLogo from "./assets/My logo2.svg"; // Assuming this is your PRWS logo for the footer
 // Import your custom design styles
 import "./Styles.css";
+import TrailerInput from "./components/TrailerInput";
 
 // Using 'default-app-id' to match your original app's default behavior
 const APP_ID = "default-app-id";
@@ -34,21 +34,23 @@ function App() {
       `artifacts/${APP_ID}/public/data/trailers`,
     );
 
-    // Filter logic: show only trailers updated within the last 10 hours
-    const tenHoursAgo = new Date(Date.now() - 10 * 60 * 60 * 1000);
-
     const unsubscribe = onSnapshot(
       query(trailersRef),
       (snapshot) => {
+        const TEN_HOURS_MS = 10 * 60 * 60 * 1000;
+        const now = Date.now();
+
         const data = snapshot.docs
-          .map((doc) => ({ id: doc.id, ...doc.data() }))
+          .map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }))
           .filter((t) => {
-            if (!t.timestamp) return true;
-            // Safety check for Firestore Timestamp vs JS Date
-            const date = t.timestamp.toDate
-              ? t.timestamp.toDate()
-              : new Date(t.timestamp);
-            return date > tenHoursAgo;
+            if (!t.timestamp) return true; // Keep local optimistic updates
+            const trailerTime = t.timestamp.toMillis
+              ? t.timestamp.toMillis()
+              : t.timestamp;
+            return now - trailerTime < TEN_HOURS_MS;
           });
 
         setTrailers(data);
@@ -60,7 +62,25 @@ function App() {
       },
     );
 
-    return () => unsubscribe();
+    // Heartbeat interval to actively expire trailers every minute
+    const expirationCheck = setInterval(() => {
+      const TEN_HOURS_MS = 10 * 60 * 60 * 1000;
+      const now = Date.now();
+      setTrailers((prev) =>
+        prev.filter((t) => {
+          if (!t.timestamp) return true; // Keep local optimistic updates
+          const trailerTime = t.timestamp.toMillis
+            ? t.timestamp.toMillis()
+            : t.timestamp;
+          return now - trailerTime < TEN_HOURS_MS;
+        }),
+      );
+    }, 60000); // Check every 60 seconds
+
+    return () => {
+      unsubscribe();
+      clearInterval(expirationCheck);
+    };
   }, []);
 
   // Pre-calculate occupied spots to prevent trailer overlaps in the fenceline
@@ -163,8 +183,6 @@ function App() {
             setSearchQuery={setSearchQuery}
           />
 
-          <StatsHeader trailers={trailers} />
-
           {lastAction && (
             <div
               id="last-entered-window"
@@ -177,12 +195,12 @@ function App() {
         </div>
         <div className="container">
           <h1 className="title">Entered Trailers</h1>
-          <TrailerList
+          <Trailers
             trailers={trailers}
             searchQuery={searchQuery}
             onEdit={setEditingTrailer}
             onDelete={handleDelete}
-            editingTrailer={editingTrailer} // Pass editingTrailer to disable edit/delete buttons when editing
+            editingTrailer={editingTrailer}
           />
         </div>
       </div>
