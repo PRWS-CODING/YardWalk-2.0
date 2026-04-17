@@ -37,6 +37,7 @@ function App() {
     const unsubscribe = onSnapshot(
       query(trailersRef),
       (snapshot) => {
+        console.log("Data received from Firebase");
         const TEN_HOURS_MS = 10 * 60 * 60 * 1000;
         const now = Date.now();
 
@@ -57,7 +58,7 @@ function App() {
         setLoading(false);
       },
       (error) => {
-        console.error("Firebase Snapshot Error:", error);
+        console.error("Firebase Snapshot Error:", error.code, error.message);
         setLoading(false);
       },
     );
