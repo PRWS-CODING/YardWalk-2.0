@@ -26,12 +26,14 @@ function App() {
   const [editingTrailer, setEditingTrailer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lastAction, setLastAction] = useState("");
+  const [initError, setInitError] = useState(false);
 
   useEffect(() => {
     console.log("App initializing...");
 
     if (!db) {
       console.warn("Database initialization failed. Check your API Key.");
+      setInitError(true);
       setLoading(false);
       return;
     }
@@ -182,7 +184,24 @@ function App() {
         <div className="container">
           <h1 className="title">Yard Walk 2.0</h1>
           {/* Error message div, initially hidden */}
-          <div id="error-message" style={{ display: "none" }}></div>
+          {initError && (
+            <div
+              className="error-banner"
+              style={{
+                backgroundColor: "#3f0909",
+                color: "#fca5a5",
+                padding: "1rem",
+                borderRadius: "0.5rem",
+                marginBottom: "1rem",
+                border: "1px solid #ef4444",
+                textAlign: "center",
+              }}
+            >
+              <strong>Configuration Error:</strong> Firebase API Key is missing.
+              Please add <code>VITE_API_KEY</code> to Vercel and{" "}
+              <strong>Redeploy</strong>.
+            </div>
+          )}
 
           <TrailerForm
             onSave={handleSave}
