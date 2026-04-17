@@ -10,6 +10,8 @@ if (!apiKey) {
   );
 }
 
+let app, auth, db;
+
 const firebaseConfig = {
   apiKey: apiKey,
   authDomain: "yard-walk.firebaseapp.com", // Replace with your actual Auth Domain
@@ -20,11 +22,16 @@ const firebaseConfig = {
   measurementId: "G-53CN6Q20PF", // Replace with your actual Measurement ID
 };
 
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+if (apiKey) {
+  app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = getFirestore(app);
+}
+
+export { auth, db };
 
 export const initAuth = async () => {
+  if (!auth) return;
   try {
     await signInAnonymously(auth);
   } catch (error) {
