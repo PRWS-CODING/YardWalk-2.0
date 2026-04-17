@@ -29,6 +29,13 @@ function App() {
 
   useEffect(() => {
     console.log("App initializing...");
+
+    if (!db) {
+      console.warn("Database initialization failed. Check your API Key.");
+      setLoading(false);
+      return;
+    }
+
     initAuth();
     const trailersRef = collection(
       db,
