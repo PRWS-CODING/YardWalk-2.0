@@ -31,8 +31,12 @@ const TrailerList = ({
   ];
 
   const getSortableValue = (t) => {
-    const fenceLine = t.northFence !== "None" ? t.northFence : t.southFence;
-    if (fenceLine === "None") return [false, "", 0];
+    // Safe check: Ensure properties exist before accessing them
+    const n = t.northFence || "None";
+    const s = t.southFence || "None";
+
+    const fenceLine = n !== "None" ? n : s;
+    if (!fenceLine || fenceLine === "None") return [false, "", 0];
     const parts = fenceLine.split(" ");
     if (parts.length === 1 && !isNaN(parts[0]))
       return [true, "NF", parseInt(parts[0], 10)];

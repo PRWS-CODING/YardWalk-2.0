@@ -8,14 +8,14 @@ import {
   setDoc,
   serverTimestamp,
 } from "firebase/firestore";
-import { db, initAuth } from "./firebase"; // Ensure firebase.js is in /src/
+import { db, initAuth } from "./firebase";
 import TrailerForm from "./components/TrailerForm";
 import Trailers from "./components/Trailers";
-import trailerLogo from "./assets/icons8-trailer-96.png";
-import prwsLogo from "./assets/My logo2.svg"; // Assuming this is your PRWS logo for the footer
-// Import your custom design styles
+// prwsLogo filename should be checked for exact casing in your filesystem
+import prwsLogo from "./assets/My logo2.svg";
+
 import "./Styles.css";
-import TrailerInput from "./components/TrailerInput";
+// TrailerInput is used inside TrailerForm, no need to import here
 
 // Using 'default-app-id' to match your original app's default behavior
 const APP_ID = "default-app-id";
@@ -28,6 +28,7 @@ function App() {
   const [lastAction, setLastAction] = useState("");
 
   useEffect(() => {
+    console.log("App initializing...");
     initAuth();
     const trailersRef = collection(
       db,
@@ -37,7 +38,7 @@ function App() {
     const unsubscribe = onSnapshot(
       query(trailersRef),
       (snapshot) => {
-        console.log("Data received from Firebase");
+        console.log(`Firebase: Received ${snapshot.size} documents`);
         const TEN_HOURS_MS = 10 * 60 * 60 * 1000;
         const now = Date.now();
 
