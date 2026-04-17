@@ -2,8 +2,16 @@ import { initializeApp } from "firebase/app";
 import { getAuth, signInAnonymously } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
+const apiKey = import.meta.env.VITE_API_KEY;
+
+if (!apiKey) {
+  console.error(
+    "Firebase API Key is missing! Check your Environment Variables.",
+  );
+}
+
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_API_KEY,
+  apiKey: apiKey,
   authDomain: "yard-walk.firebaseapp.com", // Replace with your actual Auth Domain
   projectId: "yard-walk", // Replace with your actual Project ID
   storageBucket: "yard-walk.firebasestorage.app", // Replace with your actual Storage Bucket
