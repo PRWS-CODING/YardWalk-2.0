@@ -2,7 +2,8 @@ import { initializeApp } from "firebase/app";
 import { getAuth, signInAnonymously } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
-const apiKey = import.meta.env.VITE_API_KEY;
+// Strip any literal quotes that might have been added in the Vercel dashboard
+const apiKey = import.meta.env.VITE_API_KEY?.replace(/^"|"$/g, "");
 const authDomain =
   import.meta.env.VITE_AUTH_DOMAIN || "yard-walk.firebaseapp.com";
 const projectId = import.meta.env.VITE_PROJECT_ID || "yard-walk";
