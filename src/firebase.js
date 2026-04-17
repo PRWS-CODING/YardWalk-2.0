@@ -3,13 +3,13 @@ import { getAuth, signInAnonymously } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 // Strip any literal quotes that might have been added in the Vercel dashboard
-const apiKey = import.meta.env.VITE_API_KEY?.replace(/^"|"$/g, "");
+const apiKey = import.meta.env.VITE_API_KEY?.trim().replace(/^["']|["']$/g, "");
 const authDomain =
   import.meta.env.VITE_AUTH_DOMAIN || "yard-walk.firebaseapp.com";
 const projectId = import.meta.env.VITE_PROJECT_ID || "yard-walk";
 
 if (!apiKey) {
-  console.log("Vite Environment Check:");
+  console.warn("Vite Environment Check:");
   console.log("- VITE_API_KEY exists:", !!import.meta.env.VITE_API_KEY);
   console.log(
     "- All available VITE keys:",
@@ -44,8 +44,13 @@ export { auth, db };
 export const initAuth = async () => {
   if (!auth) return;
   try {
+    console.log("Attempting anonymous sign-in...");
     await signInAnonymously(auth);
+    console.log("Auth success: Anonymous user signed in.");
   } catch (error) {
-    console.error("Auth failed", error);
+    console.error(
+      "CRITICAL: Authentication failed. Data access will be denied.",
+      error,
+    );
   }
 };

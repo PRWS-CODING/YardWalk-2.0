@@ -38,55 +38,61 @@ function App() {
       return;
     }
 
-    initAuth();
-    const trailersRef = collection(
-      db,
-      `artifacts/${APP_ID}/public/data/trailers`,
-    );
+    let unsubscribe = () => {};
 
-    const unsubscribe = onSnapshot(
-      query(trailersRef),
-      (snapshot) => {
-        console.log(`Firebase: Received ${snapshot.size} documents`);
-        const TEN_HOURS_MS = 10 * 60 * 60 * 1000;
-        const now = Date.now();
+    const startListening = async () => {
+      await initAuth();
 
-        const data = snapshot.docs
-          .map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }))
-          .filter((t) => {
-            if (!t.timestamp) return true; // Keep local optimistic updates
-            const trailerTime = t.timestamp.toMillis
-              ? t.timestamp.toMillis()
-              : t.timestamp;
-            return now - trailerTime < TEN_HOURS_MS;
-          });
+      const trailersRef = collection(
+        db,
+        `artifacts/${APP_ID}/public/data/trailers`,
+      );
 
-        setTrailers(data);
-        setLoading(false);
-      },
-      (error) => {
-        console.error("Firebase Snapshot Error:", error.code, error.message);
-        setLoading(false);
-      },
-    );
+      unsubscribe = onSnapshot(
+        query(trailersRef),
+        (snapshot) => {
+          console.log(`Firebase: Received ${snapshot.size} documents`);
+          const TEN_HOURS_MS = 10 * 60 * 60 * 1000;
+          const now = Date.now();
 
-    // Heartbeat interval to actively expire trailers every minute
+          const data = snapshot.docs
+            .map((doc) => ({
+              id: doc.id,
+              ...doc.data(),
+            }))
+            .filter((t) => {
+              if (!t.timestamp) return true; // Keep local optimistic updates
+              const trailerTime = t.timestamp.toMillis
+                ? t.timestamp.toMillis()
+                : t.timestamp;
+              return now - trailerTime < TEN_HOURS_MS;
+            });
+
+          setTrailers(data);
+          setLoading(false);
+        },
+        (error) => {
+          console.error("Firebase Snapshot Error:", error.code, error.message);
+          setLoading(false);
+        },
+      );
+    };
+
+    startListening();
+
     const expirationCheck = setInterval(() => {
       const TEN_HOURS_MS = 10 * 60 * 60 * 1000;
       const now = Date.now();
       setTrailers((prev) =>
         prev.filter((t) => {
-          if (!t.timestamp) return true; // Keep local optimistic updates
+          if (!t.timestamp) return true;
           const trailerTime = t.timestamp.toMillis
             ? t.timestamp.toMillis()
             : t.timestamp;
           return now - trailerTime < TEN_HOURS_MS;
         }),
       );
-    }, 60000); // Check every 60 seconds
+    }, 60000);
 
     return () => {
       unsubscribe();
