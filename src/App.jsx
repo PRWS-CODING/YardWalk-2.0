@@ -246,7 +246,7 @@ function App() {
           <img src={prwsLogo} alt="PR Web Solutions Logo" />
         </figure>
         <p className="logo__text">
-          PR Web Solutions &copy; {new Date().getFullYear()}
+          PR Web Solutions &copy; 2025
         </p>
         <div className="footer__text">
           Questions, Comments,
