@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from "react";
 
 const NORTH_FENCE_OPTIONS = [
   { value: "None", label: "None" },
@@ -58,86 +58,96 @@ const SOUTH_FENCE_OPTIONS = [
   })),
 ];
 
+/**
+ * Renders a single option for the fence line select dropdown.
+ * @param {object} props
+ * @param {object} props.option The option object { value, label }.
+ * @param {Map<string, { number: string }>} props.occupiedSpots A map of occupied spots.
+ * @param {string} props.trailerNumber The current trailer number being edited.
+ * @param {string} props.fenceLinePrefix The prefix for the fence line (e.g., "NF", "SF").
+ * @returns {JSX.Element} The option element.
+ */
+const FenceLineOption = memo(function FenceLineOption({
+  option,
+  occupiedSpots,
+  trailerNumber,
+  fenceLinePrefix,
+}) {
+  if (option.value === "None") {
+    return (
+      <option key="none" value="None">
+        None
+      </option>
+    );
+  }
+  const spotKey = `${fenceLinePrefix}:${option.value}`;
+  const occupiedBy = occupiedSpots.get(spotKey);
+  const isThisTrailer = occupiedBy?.number === trailerNumber;
+  const isDisabled = occupiedBy && !isThisTrailer;
+
+  return (
+    <option key={option.value} value={option.value} disabled={isDisabled}>
+      {option.label} {isDisabled ? `(Occupied: ${occupiedBy.number})` : ""}
+    </option>
+  );
+});
+
 const Parking = ({
   northFence,
   southFence,
   onUpdate,
   occupiedSpots,
   trailerNumber,
-}) => {
-  return (
-    <>
-      <div className="input-group" style={{ marginTop: "2rem" }}>
-        <label className="input-label">North Fence Line</label>
-        <select
-          className="input-fenceline"
-          value={northFence}
-          onChange={(e) =>
-            onUpdate({
-              northFence: e.target.value,
-              southFence: "None",
-            })
-          }
-        >
-          {NORTH_FENCE_OPTIONS.map((option) => {
-            if (option.value === "None")
-              return (
-                <option key="none" value="None">
-                  None
-                </option>
-              );
-            const occ = occupiedSpots.get(`NF:${option.value}`);
-            const isThisTrailer = occ?.number === trailerNumber;
-            return (
-              <option
-                key={option.value}
-                value={option.value}
-                disabled={occ && !isThisTrailer}
-              >
-                {option.label}{" "}
-                {occ && !isThisTrailer ? `(Occupied: ${occ.number})` : ""}
-              </option>
-            );
-          })}
-        </select>
-      </div>
+}) => (
+  <>
+    <div className="input-group parking-input-group">
+      <label className="input-label">North Fence Line</label>
+      <select
+        className="input-fenceline"
+        value={northFence}
+        onChange={(e) =>
+          onUpdate({
+            northFence: e.target.value,
+            southFence: "None",
+          })
+        }
+      >
+        {NORTH_FENCE_OPTIONS.map((option) => (
+          <FenceLineOption
+            key={option.value}
+            option={option}
+            occupiedSpots={occupiedSpots}
+            trailerNumber={trailerNumber}
+            fenceLinePrefix="NF"
+          />
+        ))}
+      </select>
+    </div>
 
-      <div className="input-group">
-        <label className="input-label">South Fence Line</label>
-        <select
-          className="input-fenceline"
-          value={southFence}
-          onChange={(e) =>
-            onUpdate({
-              southFence: e.target.value,
-              northFence: "None",
-            })
-          }
-        >
-          {SOUTH_FENCE_OPTIONS.map((option) => {
-            if (option.value === "None")
-              return (
-                <option key="none" value="None">
-                  None
-                </option>
-              );
-            const occ = occupiedSpots.get(`SF:${option.value}`);
-            const isThisTrailer = occ?.number === trailerNumber;
-            return (
-              <option
-                key={option.value}
-                value={option.value}
-                disabled={occ && !isThisTrailer}
-              >
-                {option.label}{" "}
-                {occ && !isThisTrailer ? `(Occupied: ${occ.number})` : ""}
-              </option>
-            );
-          })}
-        </select>
-      </div>
-    </>
-  );
-};
+    <div className="input-group">
+      <label className="input-label">South Fence Line</label>
+      <select
+        className="input-fenceline"
+        value={southFence}
+        onChange={(e) =>
+          onUpdate({
+            southFence: e.target.value,
+            northFence: "None",
+          })
+        }
+      >
+        {SOUTH_FENCE_OPTIONS.map((option) => (
+          <FenceLineOption
+            key={option.value}
+            option={option}
+            occupiedSpots={occupiedSpots}
+            trailerNumber={trailerNumber}
+            fenceLinePrefix="SF"
+          />
+        ))}
+      </select>
+    </div>
+  </>
+);
 
-export default Parking;
+export default memo(Parking);

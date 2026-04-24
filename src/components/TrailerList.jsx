@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback, memo } from "react";
 
 const TrailerList = ({
   trailers,
@@ -28,31 +28,81 @@ const TrailerList = ({
       title: "All Inbound & Seasonal Trailers",
       filter: (t) => t.inbound || t.seasonal,
     },
+    {
+      title: "All Trailers",
+      filter: () => true,
+    },
   ];
 
   const getSortableValue = (t) => {
-    // Safe check: Ensure properties exist before accessing them
-    const n = t.northFence || "None";
-    const s = t.southFence || "None";
+    const nf = t.northFence || "None";
+    const sf = t.southFence || "None";
 
-    const fenceLine = n !== "None" ? n : s;
-    if (!fenceLine || fenceLine === "None") return [false, "", 0];
-    const parts = fenceLine.split(" ");
-    if (parts.length === 1 && !isNaN(parts[0]))
-      return [true, "NF", parseInt(parts[0], 10)];
-    const numericPart = parts.pop();
-    return [true, parts.join(" "), parseInt(numericPart, 10)];
+    // 1. North Fence Logic
+    if (nf !== "None") {
+      const parts = nf.split(" ");
+      let group, num;
+      if (parts.length === 1 && !isNaN(parts[0])) {
+        num = parseInt(parts[0], 10);
+        group = num <= 25 ? "NF_NUM_LOW" : "NF_NUM_HIGH";
+      } else {
+        num = parseInt(parts.pop(), 10);
+        group = parts.join(" ");
+      }
+      const sequence = [
+        "TA",
+        "NF_NUM_LOW",
+        "NP",
+        "NF_NUM_HIGH",
+        "Curb",
+        "WT",
+        "B",
+      ];
+      return [0, sequence.indexOf(group), num];
+    }
+
+    // 2. South Fence Logic
+    if (sf !== "None") {
+      const parts = sf.split(" ");
+      let group, num;
+      if (parts.length === 1 && !isNaN(parts[0])) {
+        num = parseInt(parts[0], 10);
+        if (num <= 329) group = "SF_NUM1";
+        else if (num <= 359) group = "SF_NUM2";
+        else group = "SF_NUM3";
+      } else {
+        num = parseInt(parts.pop(), 10);
+        group = parts.join(" ");
+        // Distinguish between the split prefix locations (Bs 1-4 vs Bs 5-13)
+        if (group === "Bs") group = num <= 4 ? "Bs_START" : "Bs_END";
+        if (group === "NPs") group = num === 1 ? "NPs_START" : "NPs_END";
+      }
+      const sequence = [
+        "Bs_START",
+        "SF_NUM1",
+        "NPs_START",
+        "SF_NUM2",
+        "NPs_END",
+        "SF_NUM3",
+        "Bs_END",
+      ];
+      return [1, sequence.indexOf(group), num];
+    }
+
+    // 3. Not Parked (None)
+    return [2, 0, parseInt(t.trailerNumber, 10) || 0];
   };
 
   const sortedTrailers = [...trailers].sort((a, b) => {
-    const [isAssA, prefixA, numA] = getSortableValue(a);
-    const [isAssB, prefixB, numB] = getSortableValue(b);
-    if (isAssA !== isAssB) return isAssB - isAssA;
-    if (prefixA !== prefixB) return prefixA.localeCompare(prefixB);
+    const [sideA, groupA, numA] = getSortableValue(a);
+    const [sideB, groupB, numB] = getSortableValue(b);
+
+    if (sideA !== sideB) return sideA - sideB;
+    if (groupA !== groupB) return groupA - groupB;
     return numA - numB;
   });
 
-  useEffect(() => {
+  const scrollToTrailer = useCallback(() => {
     if (searchQuery.length === 6) {
       const element = document.querySelector(
         `[data-trailer-number="${searchQuery}"]`,
@@ -60,14 +110,78 @@ const TrailerList = ({
       if (element)
         element.scrollIntoView({ behavior: "smooth", block: "center" });
     }
-  }, [searchQuery]);
+  }, [searchQuery]); // Dependency on searchQuery
 
-  const toggleCategory = (title) => {
+  useEffect(() => {
+    scrollToTrailer();
+  }, [scrollToTrailer]); // Dependency on memoized scrollToTrailer
+
+  const toggleCategory = useCallback((title) => {
     setExpandedCategories((prev) => ({
       ...prev,
       [title]: !prev[title],
     }));
-  };
+  }, []); // No dependencies, as it uses functional update
+
+  /**
+   * Renders a single trailer item.
+   * @param {object} t The trailer object.
+   * @param {function} onEdit Callback to edit a trailer.
+   * @param {function} onDelete Callback to delete a trailer.
+   * @param {object|null} editingTrailer The trailer currently being edited.
+   * @param {string} searchQuery The current search query.
+   * @returns {JSX.Element} The trailer list item.
+   */
+  const TrailerItem = memo(function TrailerItem({
+    t,
+    onEdit,
+    onDelete,
+    editingTrailer,
+    searchQuery,
+  }) {
+    return (
+      <li
+        key={t.id}
+        data-trailer-number={t.trailerNumber}
+        className={`trailer-item ${
+          t.needsFuel ? "needs-fuel" : "no-fuel-needed"
+        } ${t.trailerNumber === searchQuery ? "selected" : ""}`}
+      >
+        <div className="trailer-info">
+          <div className="trailer-number">{t.trailerNumber}</div>
+          <div>
+            <button
+              className="edit-button"
+              onClick={() => onEdit(t)}
+              disabled={!!editingTrailer}
+            >
+              ✎
+            </button>
+            <button
+              className="delete-button"
+              onClick={() => onDelete(t.id, t.trailerNumber)}
+            >
+              &times;
+            </button>
+          </div>
+          <div className="text-sm">
+            {[
+              t.status,
+              t.needsFuel ? "Needs Fuel" : null,
+              t.inbound ? "Inbound" : null,
+              t.seasonal ? "Seasonal" : null,
+              t.palletShuttle ? "Pallet Shuttle" : null,
+              t.northFence !== "None" ? `NF: ${t.northFence}` : null,
+              t.southFence !== "None" ? `SF: ${t.southFence}` : null,
+              t.comments ? `Note: ${t.comments}` : null,
+            ]
+              .filter(Boolean)
+              .join(" | ")}
+          </div>
+        </div>
+      </li>
+    );
+  });
 
   const renderList = (category) => {
     const list = sortedTrailers
@@ -87,60 +201,29 @@ const TrailerList = ({
         <h2
           className="section-title"
           onClick={() => toggleCategory(category.title)}
-          style={{
-            cursor: "pointer",
-            display: "flex",
-            justifyContent: "space-between",
-          }}
+          // Moved inline styles to CSS class `section-title-header`
+          className="section-title section-title-header"
         >
           {category.title}
           <span>{isExpanded ? "−" : "+"}</span>
         </h2>
         {isExpanded && (
           <div className="trailer-list-container" ref={listRef}>
-            <ul>
-              {list.map((t) => (
-                <li
-                  key={t.id}
-                  data-trailer-number={t.trailerNumber}
-                  className={`trailer-item ${
-                    t.needsFuel ? "needs-fuel" : "no-fuel-needed"
-                  } ${t.trailerNumber === searchQuery ? "selected" : ""}`}
-                >
-                  <div className="trailer-info">
-                    <div className="trailer-number">{t.trailerNumber}</div>
-                    <div>
-                      <button
-                        className="edit-button"
-                        onClick={() => onEdit(t)}
-                        disabled={!!editingTrailer}
-                      >
-                        ✎
-                      </button>
-                      <button
-                        className="delete-button"
-                        onClick={() => onDelete(t.id, t.trailerNumber)}
-                      >
-                        &times;
-                      </button>
-                    </div>
-                    <div className="text-sm">
-                      {[
-                        t.status,
-                        t.needsFuel ? "Needs Fuel" : null,
-                        t.inbound ? "Inbound" : null,
-                        t.seasonal ? "Seasonal" : null,
-                        t.palletShuttle ? "Pallet Shuttle" : null,
-                        t.northFence !== "None" ? `NF: ${t.northFence}` : null,
-                        t.southFence !== "None" ? `SF: ${t.southFence}` : null,
-                        t.comments ? `Note: ${t.comments}` : null,
-                      ]
-                        .filter(Boolean)
-                        .join(" | ")}
-                    </div>
-                  </div>
-                </li>
-              ))}
+            <ul className="trailer-items-list">
+              {list.map(
+                (
+                  t, // Pass necessary props to TrailerItem
+                ) => (
+                  <TrailerItem
+                    key={t.id}
+                    t={t}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                    editingTrailer={editingTrailer}
+                    searchQuery={searchQuery}
+                  />
+                ),
+              )}
             </ul>
           </div>
         )}
@@ -148,7 +231,9 @@ const TrailerList = ({
     );
   };
 
-  return <>{categories.map(renderList)}</>; // No container here, App.jsx provides it
+  return (
+    <div className="trailer-list-sections">{categories.map(renderList)}</div>
+  );
 };
 
-export default TrailerList;
+export default memo(TrailerList);

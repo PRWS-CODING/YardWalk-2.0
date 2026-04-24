@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from "react";
 
 function RadioButtons({ status, onStatusChange }) {
   const options = ["Empty", "Salvage", "Full"];
@@ -26,4 +26,4 @@ function RadioButtons({ status, onStatusChange }) {
   );
 }
 
-export default RadioButtons;
+export default memo(RadioButtons);

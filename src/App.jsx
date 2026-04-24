@@ -10,6 +10,8 @@ import {
 } from "firebase/firestore";
 import { db, initAuth } from "./firebase";
 import TrailerForm from "./components/TrailerForm";
+import ConfirmationModal from "./components/ui/ConfirmationModal";
+import Warning from "./components/ui/Warning";
 import Trailers from "./components/Trailers";
 // prwsLogo filename should be checked for exact casing in your filesystem
 import prwsLogo from "./assets/My logo2.svg";
@@ -24,6 +26,8 @@ function App() {
   const [trailers, setTrailers] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [editingTrailer, setEditingTrailer] = useState(null);
+  const [deleteId, setDeleteId] = useState(null);
+  const [warning, setWarning] = useState("");
   const [loading, setLoading] = useState(true);
   const [lastAction, setLastAction] = useState("");
   const [initError, setInitError] = useState(false);
@@ -158,21 +162,21 @@ function App() {
       setTimeout(() => setLastAction(""), 3000);
     } catch (error) {
       console.error("Error saving trailer:", error);
-      alert("Failed to save trailer.");
+      setWarning("Failed to save trailer.");
     }
   };
 
-  const handleDelete = async (id, number) => {
-    if (window.confirm(`Are you sure you want to delete trailer ${number}?`)) {
-      try {
-        await deleteDoc(
-          doc(db, `artifacts/${APP_ID}/public/data/trailers`, id),
-        );
-        setLastAction(`Deleted: ${number}`);
-        setTimeout(() => setLastAction(""), 3000);
-      } catch (error) {
-        console.error("Error deleting:", error);
-      }
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    const { id, number } = deleteId;
+    try {
+      await deleteDoc(doc(db, `artifacts/${APP_ID}/public/data/trailers`, id));
+      setLastAction(`Deleted: ${number}`);
+      setDeleteId(null);
+      setTimeout(() => setLastAction(""), 3000);
+    } catch (error) {
+      console.error("Error deleting:", error);
+      setWarning("Failed to delete trailer.");
     }
   };
 
@@ -191,22 +195,21 @@ function App() {
           <h1 className="title">Yard Walk 2.0</h1>
           {/* Error message div, initially hidden */}
           {initError && (
-            <div
-              className="error-banner"
-              style={{
-                backgroundColor: "#3f0909",
-                color: "#fca5a5",
-                padding: "1rem",
-                borderRadius: "0.5rem",
-                marginBottom: "1rem",
-                border: "1px solid #ef4444",
-                textAlign: "center",
-              }}
-            >
+            <div className="warning-banner">
               <strong>Configuration Error:</strong> Firebase API Key is missing.
               Please add <code>VITE_API_KEY</code> to Vercel and{" "}
               <strong>Redeploy</strong>.
             </div>
+          )}
+
+          <Warning message={warning} onClear={() => setWarning("")} />
+
+          {deleteId && (
+            <ConfirmationModal
+              message={`Are you sure you want to delete trailer ${deleteId.number}?`}
+              onConfirm={handleDelete}
+              onCancel={() => setDeleteId(null)}
+            />
           )}
 
           <TrailerForm
@@ -215,6 +218,7 @@ function App() {
             onCancel={() => setEditingTrailer(null)}
             occupiedSpots={occupiedSpots}
             setSearchQuery={setSearchQuery}
+            onWarning={setWarning}
           />
 
           {lastAction && (
@@ -233,7 +237,7 @@ function App() {
             trailers={trailers}
             searchQuery={searchQuery}
             onEdit={setEditingTrailer}
-            onDelete={handleDelete}
+            onDelete={(id, number) => setDeleteId({ id, number })}
             editingTrailer={editingTrailer}
           />
         </div>

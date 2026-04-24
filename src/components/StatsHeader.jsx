@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from "react";
 
 const StatsHeader = ({ trailers }) => {
   const emptyCount = trailers.filter((t) => t.status === "Empty").length;
@@ -30,11 +30,13 @@ const StatsHeader = ({ trailers }) => {
         </span>
         <span className="count-item">
           Salvage Needs Fuel:{" "}
-          <span id="salvage-needs-fuel-count" className="needs-fuel-count">{salvageNeedsFuelCount}</span>
+          <span id="salvage-needs-fuel-count" className="needs-fuel-count">
+            {salvageNeedsFuelCount}
+          </span>
         </span>
       </div>
     </>
   );
 };
 
-export default StatsHeader;
+export default memo(StatsHeader);
