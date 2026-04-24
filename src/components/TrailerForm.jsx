@@ -1,4 +1,4 @@
-import React, { useState, useEffect, memo, useCallback } from "react";
+import React, { useState, memo, useCallback } from "react";
 import TrailerInput from "./TrailerInput";
 import RadioButtons from "./RadioButtons";
 import Parking from "./Parking";
@@ -64,6 +64,19 @@ const HoloCheckbox = memo(function HoloCheckbox({
   );
 });
 
+// Define DEFAULT_TRAILER_FORM_STATE outside the component to prevent re-creation on every render
+const DEFAULT_TRAILER_FORM_STATE = {
+  trailerNumber: "",
+  status: "Empty",
+  needsFuel: false,
+  inbound: false,
+  seasonal: false,
+  palletShuttle: false,
+  northFence: "None",
+  southFence: "None",
+  comments: "",
+};
+
 const TrailerForm = ({
   onSave,
   editingTrailer,
@@ -72,29 +85,14 @@ const TrailerForm = ({
   setSearchQuery,
   onWarning,
 }) => {
-  const initialState = {
-    trailerNumber: "",
-    status: "Empty",
-    needsFuel: false,
-    inbound: false,
-    seasonal: false,
-    palletShuttle: false,
-    northFence: "None",
-    southFence: "None",
-    comments: "",
-  };
-
-  const [formData, setFormData] = useState(initialState);
-  const [showComments, setShowComments] = useState(false);
-
-  useEffect(() => {
-    if (editingTrailer) {
-      setFormData(editingTrailer);
-      setShowComments(!!editingTrailer.comments);
-    } else {
-      setFormData(initialState);
-    }
-  }, [editingTrailer]);
+  // Initialize formData based on editingTrailer or default state.
+  // This initializer function runs only once when the component is mounted.
+  const [formData, setFormData] = useState(() =>
+    editingTrailer ? editingTrailer : DEFAULT_TRAILER_FORM_STATE,
+  );
+  const [showComments, setShowComments] = useState(() =>
+    editingTrailer ? !!editingTrailer.comments : false,
+  );
 
   const handleNumberChange = useCallback(
     (e) => {
@@ -118,7 +116,7 @@ const TrailerForm = ({
       if (formData.trailerNumber.length < 4)
         return onWarning("Enter a valid trailer number");
       onSave(formData);
-      setFormData(initialState);
+      setFormData(DEFAULT_TRAILER_FORM_STATE); // Reset to default after saving
       setSearchQuery("");
     },
     [formData, onSave, setSearchQuery, onWarning],

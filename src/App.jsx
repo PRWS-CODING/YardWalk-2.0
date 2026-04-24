@@ -13,7 +13,7 @@ import TrailerForm from "./components/TrailerForm";
 import ConfirmationModal from "./components/ui/ConfirmationModal";
 import Warning from "./components/ui/Warning";
 import Trailers from "./components/Trailers";
-// prwsLogo filename should be checked for exact casing in your filesystem
+// Logo filename should be checked for exact casing in your filesystem
 import prwsLogo from "./assets/My logo2.svg";
 
 import "./Styles.css";
@@ -28,19 +28,16 @@ function App() {
   const [editingTrailer, setEditingTrailer] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
   const [warning, setWarning] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!!db); // Only start loading if db is initialized
   const [lastAction, setLastAction] = useState("");
-  const [initError, setInitError] = useState(false);
+  const [initError] = useState(!db); // Set error immediately if db is missing
 
   useEffect(() => {
-    console.log("App initializing...");
-
     if (!db) {
-      console.warn("Database initialization failed. Check your API Key.");
-      setInitError(true);
-      setLoading(false);
       return;
     }
+
+    console.log("App initializing...");
 
     let unsubscribe = () => {};
 
@@ -104,7 +101,7 @@ function App() {
     };
   }, []);
 
-  // Pre-calculate occupied spots to prevent trailer overlaps in the fenceline
+  // Pre-calculate occupied spots to prevent trailer overlaps in the fenceLine
   const occupiedSpots = useMemo(() => {
     const spots = new Map();
     trailers.forEach((t) => {
@@ -213,6 +210,7 @@ function App() {
           )}
 
           <TrailerForm
+            key={editingTrailer ? editingTrailer.id : "new-trailer"} // Key changes to force re-mount and re-initialize state
             onSave={handleSave}
             editingTrailer={editingTrailer}
             onCancel={() => setEditingTrailer(null)}
