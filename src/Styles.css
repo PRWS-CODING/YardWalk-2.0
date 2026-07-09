@@ -288,7 +288,7 @@ body {
   font-size: 1.5rem;
 }
 
-.pallet-shuttle {
+.pallet-shuttle  {
   color: #1a1a1a; /* Dark slate/black text */
   border: 2px solid #1a1a1a;
   font-weight: 700;
@@ -333,6 +333,15 @@ body {
 
 .delete-button:hover {
   color: #ef4444;
+}
+
+.pallet-shuttle .delete-button {
+  color: #1a1a1a;
+}
+
+.pallet-shuttle .delete-button:hover {
+  /* A slightly darker shade for hover, or just black */
+  color: #000000;
 }
 
 .edit-button:hover {

@@ -117,9 +117,10 @@ const TrailerForm = ({
         return onWarning("Trailer number must be exactly 6 digits.");
       onSave(formData);
       setFormData(DEFAULT_TRAILER_FORM_STATE); // Reset to default after saving
+      setShowComments(false);
       setSearchQuery("");
     },
-    [formData, onSave, setSearchQuery, onWarning],
+    [formData, onSave, setSearchQuery, onWarning, setShowComments],
   );
 
   const handleCheckboxChange = useCallback((name, checked) => {
