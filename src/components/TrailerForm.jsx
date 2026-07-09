@@ -113,8 +113,8 @@ const TrailerForm = ({
   const handleSubmit = useCallback(
     (e) => {
       e.preventDefault();
-      if (formData.trailerNumber.length < 4)
-        return onWarning("Enter a valid trailer number");
+      if (formData.trailerNumber.length !== 6)
+        return onWarning("Trailer number must be exactly 6 digits.");
       onSave(formData);
       setFormData(DEFAULT_TRAILER_FORM_STATE); // Reset to default after saving
       setSearchQuery("");
