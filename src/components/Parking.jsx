@@ -1,4 +1,4 @@
-import React, { memo } from "react";
+import React, { memo, useState, useEffect } from "react";
 
 const NORTH_FENCE_OPTIONS = [
   { value: "None", label: "None" },
@@ -98,56 +98,73 @@ const Parking = ({
   onUpdate,
   occupiedSpots,
   trailerNumber,
-}) => (
-  <>
-    <div className="input-group parking-input-group">
-      <label className="input-label">North Fence Line</label>
-      <select
-        className="input-fenceline"
-        value={northFence}
-        onChange={(e) =>
-          onUpdate({
-            northFence: e.target.value,
-            southFence: "None",
-          })
-        }
-      >
-        {NORTH_FENCE_OPTIONS.map((option) => (
-          <FenceLineOption
-            key={option.value}
-            option={option}
-            occupiedSpots={occupiedSpots}
-            trailerNumber={trailerNumber}
-            fenceLinePrefix="NF"
-          />
-        ))}
-      </select>
-    </div>
+}) => {
+  const [isNorthFocused, setIsNorthFocused] = useState(false);
+  const [isSouthFocused, setIsSouthFocused] = useState(false);
+  const [stableNorthFence, setStableNorthFence] = useState(northFence);
+  const [stableSouthFence, setStableSouthFence] = useState(southFence);
 
-    <div className="input-group">
-      <label className="input-label">South Fence Line</label>
-      <select
-        className="input-fenceline"
-        value={southFence}
-        onChange={(e) =>
-          onUpdate({
-            southFence: e.target.value,
-            northFence: "None",
-          })
-        }
-      >
-        {SOUTH_FENCE_OPTIONS.map((option) => (
-          <FenceLineOption
-            key={option.value}
-            option={option}
-            occupiedSpots={occupiedSpots}
-            trailerNumber={trailerNumber}
-            fenceLinePrefix="SF"
-          />
-        ))}
-      </select>
-    </div>
-  </>
-);
+  useEffect(() => {
+    if (!isNorthFocused) {
+      setStableNorthFence(northFence);
+    }
+  }, [northFence, isNorthFocused]);
+
+  useEffect(() => {
+    if (!isSouthFocused) {
+      setStableSouthFence(southFence);
+    }
+  }, [southFence, isSouthFocused]);
+
+  return (
+    <>
+      <div className="input-group parking-input-group">
+        <label className="input-label">North Fence Line</label>
+        <select
+          className="input-fenceline"
+          value={stableNorthFence}
+          onFocus={() => setIsNorthFocused(true)}
+          onBlur={() => setIsNorthFocused(false)}
+          onChange={(e) =>
+            onUpdate({ northFence: e.target.value, southFence: "None" })
+          }
+        >
+          {NORTH_FENCE_OPTIONS.map((option) => (
+            <FenceLineOption
+              key={option.value}
+              option={option}
+              occupiedSpots={occupiedSpots}
+              trailerNumber={trailerNumber}
+              fenceLinePrefix="NF"
+            />
+          ))}
+        </select>
+      </div>
+
+      <div className="input-group">
+        <label className="input-label">South Fence Line</label>
+        <select
+          className="input-fenceline"
+          value={stableSouthFence}
+          onFocus={() => setIsSouthFocused(true)}
+          onBlur={() => setIsSouthFocused(false)}
+          onChange={(e) =>
+            onUpdate({ southFence: e.target.value, northFence: "None" })
+          }
+        >
+          {SOUTH_FENCE_OPTIONS.map((option) => (
+            <FenceLineOption
+              key={option.value}
+              option={option}
+              occupiedSpots={occupiedSpots}
+              trailerNumber={trailerNumber}
+              fenceLinePrefix="SF"
+            />
+          ))}
+        </select>
+      </div>
+    </>
+  );
+};
 
 export default memo(Parking);
