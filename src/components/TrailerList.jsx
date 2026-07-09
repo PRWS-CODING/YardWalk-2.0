@@ -139,13 +139,26 @@ const TrailerList = ({
     editingTrailer,
     searchQuery,
   }) {
+    const classNames = [
+      "trailer-item",
+      t.palletShuttle ? "pallet-shuttle" : "",
+      t.palletShuttle
+        ? t.status === "Empty"
+          ? "pallet-shuttle-empty"
+          : "pallet-shuttle-full"
+        : t.needsFuel
+          ? "needs-fuel"
+          : "no-fuel-needed",
+      t.trailerNumber === searchQuery ? "selected" : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+
     return (
       <li
         key={t.id}
         data-trailer-number={t.trailerNumber}
-        className={`trailer-item ${
-          t.needsFuel ? "needs-fuel" : "no-fuel-needed"
-        } ${t.trailerNumber === searchQuery ? "selected" : ""}`}
+        className={classNames}
       >
         <div className="trailer-info">
           <div className="trailer-number">{t.trailerNumber}</div>

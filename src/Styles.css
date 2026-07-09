@@ -51,7 +51,7 @@
 }
 
 .hidden {
-  display: none !important;
+  display: none;
 }
 
 /* Add style for the new button */
@@ -286,6 +286,28 @@ body {
 .trailer-number {
   font-weight: 600;
   font-size: 1.5rem;
+}
+
+.pallet-shuttle {
+  color: #1a1a1a; /* Dark slate/black text */
+  border: 2px solid #1a1a1a;
+  font-weight: 700;
+}
+
+.pallet-shuttle-full {
+  background-color: #ff6700; /* Neon orange for FULL */
+}
+
+.pallet-shuttle-empty {
+  background-color: #ff9f1c; /* A slightly different orange for EMPTY */
+}
+
+.pallet-shuttle .trailer-number {
+  font-weight: 800; /* Extra bold for the trailer number */
+}
+
+.pallet-shuttle.selected {
+  box-shadow: 0 0 12px 4px #ff9f1c; /* Keep a distinct glow when selected */
 }
 
 .delete-button,
@@ -618,7 +640,6 @@ img {
   gap: 1rem;
   color: var(--text-color);
   cursor: pointer;
-  
 }
 
 .holo-checkbox-input {
