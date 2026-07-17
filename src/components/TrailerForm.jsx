@@ -5,12 +5,6 @@ import Parking from "./Parking";
 
 /**
  * HoloCheckbox component extracted from TrailerForm.
- * @param {object} props
- * @param {string} props.label The label for the checkbox.
- * @param {string} props.name The name attribute for the checkbox input.
- * @param {boolean} props.checked The checked state of the checkbox.
- * @param {function(boolean): void} props.onChange The change handler for the checkbox.
- * @returns {JSX.Element} The HoloCheckbox component.
  */
 const HoloCheckbox = memo(function HoloCheckbox({
   label,
@@ -85,14 +79,26 @@ const TrailerForm = ({
   setSearchQuery,
   onWarning,
 }) => {
-  // Initialize formData based on editingTrailer or default state.
-  // This initializer function runs only once when the component is mounted.
-  const [formData, setFormData] = useState(() =>
-    editingTrailer ? editingTrailer : DEFAULT_TRAILER_FORM_STATE,
-  );
-  const [showComments, setShowComments] = useState(() =>
-    editingTrailer ? !!editingTrailer.comments : false,
-  );
+  // Initialize state
+  const [formData, setFormData] = useState(DEFAULT_TRAILER_FORM_STATE);
+  const [showComments, setShowComments] = useState(false);
+
+  // 🌟 Track the previous editingTrailer ID to detect shifts on render
+  const [prevEditingId, setPrevEditingId] = useState(null);
+
+  const currentEditingId = editingTrailer ? editingTrailer.id : null;
+
+  // 🌟 Sync state directly during render (No useEffect required!)
+  if (currentEditingId !== prevEditingId) {
+    setPrevEditingId(currentEditingId);
+    if (editingTrailer) {
+      setFormData(editingTrailer);
+      setShowComments(!!editingTrailer.comments);
+    } else {
+      setFormData(DEFAULT_TRAILER_FORM_STATE);
+      setShowComments(false);
+    }
+  }
 
   const handleNumberChange = useCallback(
     (e) => {

@@ -7,7 +7,8 @@ const TrailerList = ({
   onDelete,
   editingTrailer,
 }) => {
-  const listRef = useRef(null);
+  // 🌟 Dynamic refs to track each category's scrollable container independently
+  const listRefs = useRef({});
   const [expandedCategories, setExpandedCategories] = useState({});
 
   const categories = [
@@ -125,15 +126,10 @@ const TrailerList = ({
 
   /**
    * Renders a single trailer item.
-   * @param {object} t The trailer object.
-   * @param {function} onEdit Callback to edit a trailer.
-   * @param {function} onDelete Callback to delete a trailer.
-   * @param {object|null} editingTrailer The trailer currently being edited.
-   * @param {string} searchQuery The current search query.
-   * @returns {JSX.Element} The trailer list item.
    */
   const TrailerItem = memo(function TrailerItem({
     t,
+    categoryTitle,
     onEdit,
     onDelete,
     editingTrailer,
@@ -154,6 +150,21 @@ const TrailerList = ({
       .filter(Boolean)
       .join(" ");
 
+    // 🌟 Intercept the delete action to capture scroll position before DOM shifts
+    const handleLocalDelete = () => {
+      const container = listRefs.current[categoryTitle];
+      const savedScrollTop = container ? container.scrollTop : 0;
+
+      onDelete(t.id, t.trailerNumber);
+
+      // Restore the scroll height immediately on the next animation frame
+      if (container) {
+        requestAnimationFrame(() => {
+          container.scrollTop = savedScrollTop;
+        });
+      }
+    };
+
     return (
       <li
         key={t.id}
@@ -172,7 +183,7 @@ const TrailerList = ({
             </button>
             <button
               className="delete-button"
-              onClick={() => onDelete(t.id, t.trailerNumber)}
+              onClick={handleLocalDelete} // 👈 Using scroll-locking delete handler
             >
               &times;
             </button>
@@ -212,31 +223,29 @@ const TrailerList = ({
     return (
       <div key={category.title} className="category-group">
         <h2
-          className="section-title"
           onClick={() => toggleCategory(category.title)}
-          // Moved inline styles to CSS class `section-title-header`
           className="section-title section-title-header"
         >
           {category.title}
           <span>{isExpanded ? "−" : "+"}</span>
         </h2>
         {isExpanded && (
-          <div className="trailer-list-container" ref={listRef}>
+          <div
+            className="trailer-list-container"
+            ref={(el) => (listRefs.current[category.title] = el)} // 🌟 Sets independent ref for each list container
+          >
             <ul className="trailer-items-list">
-              {list.map(
-                (
-                  t, // Pass necessary props to TrailerItem
-                ) => (
-                  <TrailerItem
-                    key={t.id}
-                    t={t}
-                    onEdit={onEdit}
-                    onDelete={onDelete}
-                    editingTrailer={editingTrailer}
-                    searchQuery={searchQuery}
-                  />
-                ),
-              )}
+              {list.map((t) => (
+                <TrailerItem
+                  key={t.id}
+                  t={t}
+                  categoryTitle={category.title} // 👈 Pass category title to identify correct ref
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                  editingTrailer={editingTrailer}
+                  searchQuery={searchQuery}
+                />
+              ))}
             </ul>
           </div>
         )}

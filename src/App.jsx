@@ -4,6 +4,8 @@ import {
   onSnapshot,
   query,
   doc,
+  where,
+  orderBy,
   deleteDoc,
   setDoc,
   serverTimestamp,
@@ -33,6 +35,7 @@ function App() {
   const [initError] = useState(!db); // Set error immediately if db is missing
 
   useEffect(() => {
+    // 1. Safety check
     if (!db) {
       return;
     }
@@ -41,65 +44,53 @@ function App() {
 
     let unsubscribe = () => {};
 
+    // 2. Define the function to start listening to Firestore
     const startListening = async () => {
-      await initAuth();
-
+      await initAuth(); // Authenticate the user
+      const TEN_HOURS_MS = 10 * 60 * 60 * 1000;
+      const cutoffTime = new Date(Date.now() - TEN_HOURS_MS);
       const trailersRef = collection(
         db,
         `artifacts/${APP_ID}/public/data/trailers`,
       );
 
+      // 3. Create the query to get recent trailers
+      const q = query(
+        trailersRef,
+        where("timestamp", ">=", cutoffTime),
+        orderBy("timestamp", "desc"),
+      );
+
+      // 4. Attach the real-time listener
       unsubscribe = onSnapshot(
-        query(trailersRef),
+        q,
         (snapshot) => {
-          console.log(`Firebase: Received ${snapshot.size} documents`);
-          const TEN_HOURS_MS = 10 * 60 * 60 * 1000;
-          const now = Date.now();
-
-          const data = snapshot.docs
-            .map((doc) => ({
-              id: doc.id,
-              ...doc.data(),
-            }))
-            .filter((t) => {
-              if (!t.timestamp) return true; // Keep local optimistic updates
-              const trailerTime = t.timestamp.toMillis
-                ? t.timestamp.toMillis()
-                : t.timestamp;
-              return now - trailerTime < TEN_HOURS_MS;
-            });
-
-          setTrailers(data);
-          setLoading(false);
+          // This function runs every time the data matching the query changes
+          console.log(`Firebase: Received ${snapshot.size} live documents`);
+          const data = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
+          setTrailers(data); // Update the component's state
+          setLoading(false); // Turn off the loading spinner
         },
         (error) => {
+          // Handle any errors
           console.error("Firebase Snapshot Error:", error.code, error.message);
           setLoading(false);
         },
       );
     };
 
+    // 5. Call the function to start the listener
     startListening();
 
-    const expirationCheck = setInterval(() => {
-      const TEN_HOURS_MS = 10 * 60 * 60 * 1000;
-      const now = Date.now();
-      setTrailers((prev) =>
-        prev.filter((t) => {
-          if (!t.timestamp) return true;
-          const trailerTime = t.timestamp.toMillis
-            ? t.timestamp.toMillis()
-            : t.timestamp;
-          return now - trailerTime < TEN_HOURS_MS;
-        }),
-      );
-    }, 60000);
-
+    // 6. Return a cleanup function
     return () => {
-      unsubscribe();
-      clearInterval(expirationCheck);
+      console.log("App cleaning up...");
+      unsubscribe(); // Detach the listener when the component unmounts
     };
-  }, []);
+  }, []); // The empty array means this effect runs only once.
 
   // Pre-calculate occupied spots to prevent trailer overlaps in the fenceLine
   const occupiedSpots = useMemo(() => {
@@ -189,7 +180,7 @@ function App() {
         {" "}
         {/* This wraps all main content */}
         <div className="container">
-          <h1 className="title">Yard Walk 2.0</h1>
+          <h1 className="title">Yard Walk 2.1.0</h1>
           {/* Error message div, initially hidden */}
           {initError && (
             <div className="warning-banner">
@@ -210,7 +201,6 @@ function App() {
           )}
 
           <TrailerForm
-            key={editingTrailer ? editingTrailer.id : "new-trailer"} // Key changes to force re-mount and re-initialize state
             onSave={handleSave}
             editingTrailer={editingTrailer}
             onCancel={() => setEditingTrailer(null)}
@@ -245,9 +235,7 @@ function App() {
         <figure className="my__logo">
           <img src={prwsLogo} alt="PR Web Solutions Logo" />
         </figure>
-        <p className="logo__text">
-          PR Web Solutions &copy; 2025
-        </p>
+        <p className="logo__text">PR Web Solutions &copy; 2025</p>
         <div className="footer__text">
           Questions, Comments,
           <a

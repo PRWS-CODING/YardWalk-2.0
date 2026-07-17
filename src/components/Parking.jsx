@@ -1,4 +1,4 @@
-import React, { memo, useState, useEffect } from "react";
+import React, { memo } from "react";
 
 const NORTH_FENCE_OPTIONS = [
   { value: "None", label: "None" },
@@ -99,22 +99,7 @@ const Parking = ({
   occupiedSpots,
   trailerNumber,
 }) => {
-  const [isNorthFocused, setIsNorthFocused] = useState(false);
-  const [isSouthFocused, setIsSouthFocused] = useState(false);
-  const [stableNorthFence, setStableNorthFence] = useState(northFence);
-  const [stableSouthFence, setStableSouthFence] = useState(southFence);
-
-  useEffect(() => {
-    if (!isNorthFocused) {
-      setStableNorthFence(northFence);
-    }
-  }, [northFence, isNorthFocused]);
-
-  useEffect(() => {
-    if (!isSouthFocused) {
-      setStableSouthFence(southFence);
-    }
-  }, [southFence, isSouthFocused]);
+  // 🌟 NO MORE LAGGED LOCAL STATES! We read directly from parent props.
 
   return (
     <>
@@ -122,9 +107,7 @@ const Parking = ({
         <label className="input-label">North Fence Line</label>
         <select
           className="input-fenceline"
-          value={stableNorthFence}
-          onFocus={() => setIsNorthFocused(true)}
-          onBlur={() => setIsNorthFocused(false)}
+          value={northFence} // 👈 Bound directly to parent state
           onChange={(e) =>
             onUpdate({ northFence: e.target.value, southFence: "None" })
           }
@@ -145,9 +128,7 @@ const Parking = ({
         <label className="input-label">South Fence Line</label>
         <select
           className="input-fenceline"
-          value={stableSouthFence}
-          onFocus={() => setIsSouthFocused(true)}
-          onBlur={() => setIsSouthFocused(false)}
+          value={southFence} // 👈 Bound directly to parent state
           onChange={(e) =>
             onUpdate({ southFence: e.target.value, northFence: "None" })
           }
