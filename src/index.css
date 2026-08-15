@@ -1,8 +1,21 @@
-/* Force vertical layout container even if device rotates */
+/* src/index.css */
+
+/* When the phone is turned sideways (landscape) */
 @media screen and (orientation: landscape) and (max-width: 900px) {
-  #root {
-    max-width: 480px;
-    margin: 0 auto;
-    min-height: 100vh;
+  html, body {
+    /* Prevent sideways scrolling */
+    overflow-x: hidden;
+  }
+
+  .app-container {
+    /* Constrain the main container to portrait width */
+    max-width: 420px !important;
+    margin: 0 auto !important;
+    width: 100% !important;
+  }
+
+  .app-wrapper {
+    /* Keep multi-column layouts stacked vertically */
+    flex-direction: column !important;
   }
 }

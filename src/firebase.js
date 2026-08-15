@@ -32,9 +32,9 @@ const firebaseConfig = {
   projectId: projectId,
   storageBucket:
     import.meta.env.VITE_STORAGE_BUCKET || "yard-walk.firebasestorage.app",
-  messagingSenderId: "633967680523", // Replace with your actual Messaging Sender ID
-  appId: "1:633967680523:web:47f7148b4966a6642e7b0e", // Replace with your actual App ID
-  measurementId: "G-53CN6Q20PF", // Replace with your actual Measurement ID
+  messagingSenderId: "633967680523",
+  appId: "1:633967680523:web:47f7148b4966a6642e7b0e",
+  measurementId: "G-53CN6Q20PF",
 };
 
 if (apiKey) {
