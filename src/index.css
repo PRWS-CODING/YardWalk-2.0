@@ -1,0 +1,8 @@
+/* Force vertical layout container even if device rotates */
+@media screen and (orientation: landscape) and (max-width: 900px) {
+  #root {
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+  }
+}

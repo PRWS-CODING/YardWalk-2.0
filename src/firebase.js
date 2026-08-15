@@ -1,6 +1,10 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, signInAnonymously } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { 
+  initializeFirestore, 
+  persistentLocalCache, 
+  persistentMultipleTabManager 
+} from "firebase/firestore";
 
 // Strip any literal quotes that might have been added in the Vercel dashboard
 const apiKey = import.meta.env.VITE_API_KEY?.trim().replace(/^["']|["']$/g, "");
@@ -36,7 +40,13 @@ const firebaseConfig = {
 if (apiKey) {
   app = initializeApp(firebaseConfig);
   auth = getAuth(app);
-  db = getFirestore(app);
+  
+  // Initialize Firestore with IndexedDB Offline Persistence enabled
+  db = initializeFirestore(app, {
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager()
+    })
+  });
 }
 
 export { auth, db };

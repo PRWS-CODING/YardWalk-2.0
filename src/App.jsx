@@ -19,6 +19,7 @@ import Trailers from "./components/Trailers";
 import prwsLogo from "./assets/My logo2.svg";
 
 import "./Styles.css";
+import "./index.css"; // Imported your new global index.css file
 // TrailerInput is used inside TrailerForm, no need to import here
 
 // Using 'default-app-id' to match your original app's default behavior
@@ -33,6 +34,23 @@ function App() {
   const [loading, setLoading] = useState(!!db); // Only start loading if db is initialized
   const [lastAction, setLastAction] = useState("");
   const [initError] = useState(!db); // Set error immediately if db is missing
+
+  // Enforce Portrait Orientation Lock on runtime (works in standalone/supported mobile contexts)
+  useEffect(() => {
+    const lockPortraitOrientation = async () => {
+      if (window.screen?.orientation?.lock) {
+        try {
+          await window.screen.orientation.lock("portrait");
+          console.log("Screen orientation locked to portrait.");
+        } catch (err) {
+          // Standard browser tabs usually block auto-locking unless added to home screen
+          console.warn("Screen orientation lock deferred or unsupported in this tab:", err.message);
+        }
+      }
+    };
+
+    lockPortraitOrientation();
+  }, []);
 
   useEffect(() => {
     // 1. Safety check
