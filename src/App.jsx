@@ -44,7 +44,10 @@ function App() {
           console.log("Screen orientation locked to portrait.");
         } catch (err) {
           // Standard browser tabs usually block auto-locking unless added to home screen
-          console.warn("Screen orientation lock deferred or unsupported in this tab:", err.message);
+          console.warn(
+            "Screen orientation lock deferred or unsupported in this tab:",
+            err.message,
+          );
         }
       }
     };
