@@ -3,60 +3,12 @@ import TrailerInput from "./TrailerInput";
 import RadioButtons from "./RadioButtons";
 import Parking from "./Parking";
 
-/**
- * HoloCheckbox component extracted from TrailerForm.
- */
-const HoloCheckbox = memo(function HoloCheckbox({
-  label,
-  name,
-  checked,
-  onChange,
-}) {
-  return (
-    <div className="checkbox-container">
-      <input
-        type="checkbox"
-        className="holo-checkbox-input"
-        id={name}
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-      />
-      <label className="holo-checkbox" htmlFor={name}>
-        <div className="holo-box">
-          <div className="holo-inner" />
-          <div className="scan-effect" />
-          <div className="holo-particles">
-            <div className="holo-particle" />
-            <div className="holo-particle" />
-            <div className="holo-particle" />
-            <div className="holo-particle" />
-            <div className="holo-particle" />
-            <div className="holo-particle" />
-          </div>
-          <div className="activation-rings">
-            <div className="activation-ring" />
-            <div className="activation-ring" />
-            <div className="activation-ring" />
-          </div>
-          <div className="cube-transform">
-            <div className="cube-face" />
-            <div className="cube-face" />
-            <div className="cube-face" />
-            <div className="cube-face" />
-            <div className="cube-face" />
-            <div className="cube-face" />
-          </div>
-        </div>
-        <div className="corner-accent" />
-        <div className="corner-accent" />
-        <div className="corner-accent" />
-        <div className="corner-accent" />
-        <div className="holo-glow" />
-      </label>
-      <span className="status-text">{label}</span>
-    </div>
-  );
-});
+const CHECKBOX_OPTIONS = [
+  { name: "needsFuel", label: "Needs Fuel?" },
+  { name: "inbound", label: "Inbound?" },
+  { name: "seasonal", label: "Seasonal?" },
+  { name: "palletShuttle", label: "Pallet Shuttle?" },
+];
 
 // Define DEFAULT_TRAILER_FORM_STATE outside the component to prevent re-creation on every render
 const DEFAULT_TRAILER_FORM_STATE = {
@@ -167,30 +119,18 @@ const TrailerForm = ({
       />
 
       <div className="checkbox-group trailer-form-checkbox-group">
-        <HoloCheckbox
-          label="Needs Fuel?"
-          name="needsFuel"
-          checked={formData.needsFuel}
-          onChange={(checked) => handleCheckboxChange("needsFuel", checked)}
-        />
-        <HoloCheckbox
-          label="Inbound?"
-          name="inbound"
-          checked={formData.inbound}
-          onChange={(checked) => handleCheckboxChange("inbound", checked)}
-        />
-        <HoloCheckbox
-          label="Seasonal?"
-          name="seasonal"
-          checked={formData.seasonal}
-          onChange={(checked) => handleCheckboxChange("seasonal", checked)}
-        />
-        <HoloCheckbox
-          label="Pallet Shuttle?"
-          name="palletShuttle"
-          checked={formData.palletShuttle}
-          onChange={(checked) => handleCheckboxChange("palletShuttle", checked)}
-        />
+        {CHECKBOX_OPTIONS.map(({ name, label }) => (
+          <label key={name} className="checkbox-label" htmlFor={name}>
+            <input
+              type="checkbox"
+              className="checkbox-input"
+              id={name}
+              checked={formData[name]}
+              onChange={(e) => handleCheckboxChange(name, e.target.checked)}
+            />
+            <span>{label}</span>
+          </label>
+        ))}
       </div>
 
       <Parking

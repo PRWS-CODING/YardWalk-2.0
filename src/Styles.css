@@ -150,6 +150,12 @@ body {
   margin: 1.5rem 0;
 }
 
+.checkbox-input {
+  transform: scale(1.1);
+  accent-color: #2e88a3;
+  cursor: pointer;
+}
+
 .form-buttons-group {
   display: flex;
   gap: 1rem;
