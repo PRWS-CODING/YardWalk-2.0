@@ -12,18 +12,13 @@ import {
 } from "firebase/firestore";
 import { db, initAuth } from "./firebase";
 import TrailerForm from "./components/TrailerForm";
+import LoginModal from "./components/ui/LoginModal";
 import ConfirmationModal from "./components/ui/ConfirmationModal";
 import Warning from "./components/ui/Warning";
 import Trailers from "./components/Trailers";
-// Logo filename should be checked for exact casing in your filesystem
 import prwsLogo from "./assets/My logo2.svg";
-
 import "./Styles.css";
-import "./index.css"; // Imported your new global index.css file
-// TrailerInput is used inside TrailerForm, no need to import here
-
-// Using 'default-app-id' to match your original app's default behavior
-const APP_ID = "default-app-id";
+import "./index.css";
 
 function App() {
   const [trailers, setTrailers] = useState([]);
@@ -31,9 +26,21 @@ function App() {
   const [editingTrailer, setEditingTrailer] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
   const [warning, setWarning] = useState("");
-  const [loading, setLoading] = useState(!!db); // Only start loading if db is initialized
+  const [loading, setLoading] = useState(!!db);
   const [lastAction, setLastAction] = useState("");
-  const [initError] = useState(!db); // Set error immediately if db is missing
+  const [initError] = useState(!db);
+
+  // Yard login state: starts open on every refresh
+  const [activeYard, setActiveYard] = useState(null);
+  const [isLoginOpen, setIsLoginOpen] = useState(true);
+
+  const currentAppId = activeYard ? activeYard.id : "default-app-id";
+
+  const handleLoginSuccess = (yard) => {
+    setActiveYard(yard);
+    setEditingTrailer(null);
+    setIsLoginOpen(false);
+  };
 
   // Enforce Portrait Orientation Lock on runtime (works in standalone/supported mobile contexts)
   useEffect(() => {
@@ -43,7 +50,6 @@ function App() {
           await window.screen.orientation.lock("portrait");
           console.log("Screen orientation locked to portrait.");
         } catch (err) {
-          // Standard browser tabs usually block auto-locking unless added to home screen
           console.warn(
             "Screen orientation lock deferred or unsupported in this tab:",
             err.message,
@@ -56,62 +62,55 @@ function App() {
   }, []);
 
   useEffect(() => {
-    // 1. Safety check
     if (!db) {
       return;
     }
 
-    console.log("App initializing...");
+    setLoading(true);
+    console.log(`App initializing for yard: ${currentAppId}...`);
 
     let unsubscribe = () => {};
 
-    // 2. Define the function to start listening to Firestore
     const startListening = async () => {
-      await initAuth(); // Authenticate the user
+      await initAuth();
       const TEN_HOURS_MS = 10 * 60 * 60 * 1000;
       const cutoffTime = new Date(Date.now() - TEN_HOURS_MS);
       const trailersRef = collection(
         db,
-        `artifacts/${APP_ID}/public/data/trailers`,
+        `artifacts/${currentAppId}/public/data/trailers`,
       );
 
-      // 3. Create the query to get recent trailers
       const q = query(
         trailersRef,
         where("timestamp", ">=", cutoffTime),
         orderBy("timestamp", "desc"),
       );
 
-      // 4. Attach the real-time listener
       unsubscribe = onSnapshot(
         q,
         (snapshot) => {
-          // This function runs every time the data matching the query changes
           console.log(`Firebase: Received ${snapshot.size} live documents`);
           const data = snapshot.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
           }));
-          setTrailers(data); // Update the component's state
-          setLoading(false); // Turn off the loading spinner
+          setTrailers(data);
+          setLoading(false);
         },
         (error) => {
-          // Handle any errors
           console.error("Firebase Snapshot Error:", error.code, error.message);
           setLoading(false);
         },
       );
     };
 
-    // 5. Call the function to start the listener
     startListening();
 
-    // 6. Return a cleanup function
     return () => {
       console.log("App cleaning up...");
-      unsubscribe(); // Detach the listener when the component unmounts
+      unsubscribe();
     };
-  }, []); // The empty array means this effect runs only once.
+  }, [currentAppId]);
 
   // Pre-calculate occupied spots to prevent trailer overlaps in the fenceLine
   const occupiedSpots = useMemo(() => {
@@ -129,16 +128,15 @@ function App() {
 
   const handleSave = async (trailerData) => {
     try {
-      // Use trailer number as ID to maintain unique records per trailer
       const docId = editingTrailer?.id || trailerData.trailerNumber;
 
       const trailerRef = doc(
         db,
-        `artifacts/${APP_ID}/public/data/trailers`,
+        `artifacts/${currentAppId}/public/data/trailers`,
         docId,
       );
       const logRef = doc(
-        collection(db, `artifacts/${APP_ID}/public/data/trailer_logs`),
+        collection(db, `artifacts/${currentAppId}/public/data/trailer_logs`),
       );
 
       const dataToSave = {
@@ -148,7 +146,6 @@ function App() {
 
       await setDoc(trailerRef, dataToSave);
 
-      // Save log entry (as seen in original app.js)
       await setDoc(logRef, {
         ...dataToSave,
         action: editingTrailer ? "update" : "create",
@@ -167,7 +164,6 @@ function App() {
       );
       setEditingTrailer(null);
 
-      // Hide notification after 3 seconds
       setTimeout(() => setLastAction(""), 3000);
     } catch (error) {
       console.error("Error saving trailer:", error);
@@ -179,7 +175,9 @@ function App() {
     if (!deleteId) return;
     const { id, number } = deleteId;
     try {
-      await deleteDoc(doc(db, `artifacts/${APP_ID}/public/data/trailers`, id));
+      await deleteDoc(
+        doc(db, `artifacts/${currentAppId}/public/data/trailers`, id),
+      );
       setLastAction(`Deleted: ${number}`);
       setDeleteId(null);
       setTimeout(() => setLastAction(""), 3000);
@@ -191,6 +189,14 @@ function App() {
 
   return (
     <div className="app-container">
+      {isLoginOpen && (
+        <LoginModal
+          onLoginSuccess={handleLoginSuccess}
+          onClose={() => setIsLoginOpen(false)}
+          canClose={!!activeYard}
+        />
+      )}
+
       {loading && (
         <div id="loading-overlay" style={{ display: "flex" }}>
           <div className="loader"></div>
@@ -198,11 +204,28 @@ function App() {
       )}
 
       <div className="app-wrapper">
-        {" "}
-        {/* This wraps all main content */}
         <div className="container">
-          <h1 className="title">Yard Walk 2.1.0</h1>
-          {/* Error message div, initially hidden */}
+          <h1
+            className="title"
+            onClick={() => setIsLoginOpen(true)}
+            style={{ cursor: "pointer" }}
+            title="Tap to switch yard"
+          >
+            Yard Walk 2.1.0
+            {activeYard && (
+              <span
+                style={{
+                  display: "block",
+                  fontSize: "0.9rem",
+                  opacity: 0.85,
+                  marginTop: "4px",
+                }}
+              >
+                {activeYard.name} (Tap to switch)
+              </span>
+            )}
+          </h1>
+
           {initError && (
             <div className="warning-banner">
               <strong>Configuration Error:</strong> Firebase API Key is missing.
