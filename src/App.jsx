@@ -73,7 +73,7 @@ function App() {
 
     const startListening = async () => {
       await initAuth();
-      const TEN_HOURS_MS = 10 * 60 * 60 * 1000;
+      const TEN_HOURS_MS = 20 * 60 * 60 * 1000;
       const cutoffTime = new Date(Date.now() - TEN_HOURS_MS);
       const trailersRef = collection(
         db,
