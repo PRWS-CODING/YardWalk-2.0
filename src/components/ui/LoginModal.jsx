@@ -1,10 +1,6 @@
 import React, { useState } from "react";
+import { YARDS } from "../../Yard";
 
-// Temporary yard list for testing before we hook up Firestore
-const YARDS = [
-  { id: "default-app-id", name: "Kroger Romulus", passcode: "1234" },
-  { id: "saginaw-aldi", name: "Saginaw Aldi", passcode: "5678" },
-];
 
 function LoginModal({ onLoginSuccess, onClose, canClose }) {
   const [selectedYardId, setSelectedYardId] = useState(YARDS[0].id);

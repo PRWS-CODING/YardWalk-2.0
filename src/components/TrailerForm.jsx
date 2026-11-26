@@ -3,24 +3,25 @@ import TrailerInput from "./TrailerInput";
 import RadioButtons from "./RadioButtons";
 import Parking from "./Parking";
 
-const CHECKBOX_OPTIONS = [
-  { name: "needsFuel", label: "Needs Fuel?" },
-  { name: "inbound", label: "Inbound?" },
-  { name: "seasonal", label: "Seasonal?" },
-  { name: "palletShuttle", label: "Pallet Shuttle?" },
-];
+const buildDefaultFormState = (yard) => {
+  const defaults = {
+    trailerNumber: "",
+    comments: "",
+  };
 
-// Define DEFAULT_TRAILER_FORM_STATE outside the component to prevent re-creation on every render
-const DEFAULT_TRAILER_FORM_STATE = {
-  trailerNumber: "",
-  status: "Empty",
-  needsFuel: false,
-  inbound: false,
-  seasonal: false,
-  palletShuttle: false,
-  northFence: "None",
-  southFence: "None",
-  comments: "",
+  (yard?.radioGroups || []).forEach((group) => {
+    defaults[group.id] = group.options?.[0] || "";
+  });
+
+  (yard?.checkboxes || []).forEach((box) => {
+    defaults[box.id] = false;
+  });
+
+  (yard?.parkingZones || []).forEach((zone) => {
+    defaults[zone.id] = "None";
+  });
+
+  return defaults;
 };
 
 const TrailerForm = ({
@@ -30,37 +31,51 @@ const TrailerForm = ({
   occupiedSpots,
   setSearchQuery,
   onWarning,
+  activeYard,
 }) => {
-  // Initialize state
-  const [formData, setFormData] = useState(DEFAULT_TRAILER_FORM_STATE);
+  const [formData, setFormData] = useState(() =>
+    buildDefaultFormState(activeYard),
+  );
   const [showComments, setShowComments] = useState(false);
 
-  // 🌟 Track the previous editingTrailer ID to detect shifts on render
+  // Sync state during render when editingTrailer or activeYard changes
   const [prevEditingId, setPrevEditingId] = useState(null);
+  const [prevYardId, setPrevYardId] = useState(activeYard?.id || null);
 
   const currentEditingId = editingTrailer ? editingTrailer.id : null;
+  const currentYardId = activeYard?.id || null;
 
-  // 🌟 Sync state directly during render (No useEffect required!)
-  if (currentEditingId !== prevEditingId) {
+  if (currentEditingId !== prevEditingId || currentYardId !== prevYardId) {
     setPrevEditingId(currentEditingId);
-    if (editingTrailer) {
-      setFormData(editingTrailer);
+    setPrevYardId(currentYardId);
+    if (editingTrailer && currentYardId === prevYardId) {
+      setFormData({
+        ...buildDefaultFormState(activeYard),
+        ...editingTrailer,
+      });
       setShowComments(!!editingTrailer.comments);
     } else {
-      setFormData(DEFAULT_TRAILER_FORM_STATE);
+      setFormData(buildDefaultFormState(activeYard));
       setShowComments(false);
     }
   }
 
+  const trailerPrefix = activeYard?.trailerPrefix ?? "";
+  const trailerLength = activeYard?.trailerLength ?? null;
+
   const handleNumberChange = useCallback(
     (e) => {
       let val = e.target.value.replace(/\D/g, "");
-      if (val.length > 0 && !val.startsWith("3")) val = "3" + val;
-      val = val.substring(0, 6);
+      if (trailerPrefix && val.length > 0 && !val.startsWith(trailerPrefix)) {
+        val = trailerPrefix + val;
+      }
+      if (trailerLength) {
+        val = val.substring(0, trailerLength);
+      }
       setFormData((prev) => ({ ...prev, trailerNumber: val }));
       setSearchQuery(val);
     },
-    [setSearchQuery],
+    [trailerPrefix, trailerLength, setSearchQuery],
   );
 
   const handleClearNumber = useCallback(() => {
@@ -71,22 +86,28 @@ const TrailerForm = ({
   const handleSubmit = useCallback(
     (e) => {
       e.preventDefault();
-      if (formData.trailerNumber.length !== 6)
-        return onWarning("Trailer number must be exactly 6 digits.");
+      if (!formData.trailerNumber) {
+        return onWarning("Please enter a trailer number.");
+      }
+      if (trailerLength && formData.trailerNumber.length !== trailerLength) {
+        return onWarning(
+          `Trailer number must be exactly ${trailerLength} digits.`,
+        );
+      }
       onSave(formData);
-      setFormData(DEFAULT_TRAILER_FORM_STATE); // Reset to default after saving
+      setFormData(buildDefaultFormState(activeYard));
       setShowComments(false);
       setSearchQuery("");
     },
-    [formData, onSave, setSearchQuery, onWarning, setShowComments],
+    [formData, trailerLength, onSave, activeYard, setSearchQuery, onWarning],
   );
 
-  const handleCheckboxChange = useCallback((name, checked) => {
-    setFormData((prev) => ({ ...prev, [name]: checked }));
+  const handleCheckboxChange = useCallback((id, checked) => {
+    setFormData((prev) => ({ ...prev, [id]: checked }));
   }, []);
 
-  const handleStatusChange = useCallback((val) => {
-    setFormData((prev) => ({ ...prev, status: val }));
+  const handleRadioChange = useCallback((groupId, val) => {
+    setFormData((prev) => ({ ...prev, [groupId]: val }));
   }, []);
 
   const handleParkingUpdate = useCallback((updates) => {
@@ -101,6 +122,8 @@ const TrailerForm = ({
     setShowComments((prev) => !prev);
   }, []);
 
+  const checkboxes = activeYard?.checkboxes || [];
+
   return (
     <form onSubmit={handleSubmit} className="trailer-form">
       <TrailerInput
@@ -111,31 +134,36 @@ const TrailerForm = ({
         onToggleComments={handleToggleComments}
         comments={formData.comments}
         onCommentsChange={handleCommentsChange}
+        trailerLength={trailerLength}
+        trailerPrefix={trailerPrefix}
       />
 
       <RadioButtons
-        status={formData.status}
-        onStatusChange={handleStatusChange}
+        radioGroups={activeYard?.radioGroups || []}
+        formData={formData}
+        onRadioChange={handleRadioChange}
       />
 
-      <div className="checkbox-group trailer-form-checkbox-group">
-        {CHECKBOX_OPTIONS.map(({ name, label }) => (
-          <label key={name} className="checkbox-label" htmlFor={name}>
-            <input
-              type="checkbox"
-              className="checkbox-input"
-              id={name}
-              checked={formData[name]}
-              onChange={(e) => handleCheckboxChange(name, e.target.checked)}
-            />
-            <span>{label}</span>
-          </label>
-        ))}
-      </div>
+      {checkboxes.length > 0 && (
+        <div className="checkbox-group trailer-form-checkbox-group">
+          {checkboxes.map(({ id, label }) => (
+            <label key={id} className="checkbox-label" htmlFor={id}>
+              <input
+                type="checkbox"
+                className="checkbox-input"
+                id={id}
+                checked={Boolean(formData[id])}
+                onChange={(e) => handleCheckboxChange(id, e.target.checked)}
+              />
+              <span>{label}</span>
+            </label>
+          ))}
+        </div>
+      )}
 
       <Parking
-        northFence={formData.northFence}
-        southFence={formData.southFence}
+        parkingZones={activeYard?.parkingZones || []}
+        formData={formData}
         occupiedSpots={occupiedSpots}
         trailerNumber={formData.trailerNumber}
         onUpdate={handleParkingUpdate}

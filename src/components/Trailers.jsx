@@ -8,16 +8,18 @@ const Trailers = ({
   onEdit,
   onDelete,
   editingTrailer,
+  activeYard,
 }) => {
   return (
     <div className="trailers-section">
-      <StatsHeader trailers={trailers} />
+      <StatsHeader trailers={trailers} activeYard={activeYard} />
       <TrailerList
         trailers={trailers}
         searchQuery={searchQuery}
         onEdit={onEdit}
         onDelete={onDelete}
         editingTrailer={editingTrailer}
+        activeYard={activeYard}
       />
     </div>
   );

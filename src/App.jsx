@@ -37,6 +37,9 @@ function App() {
   const currentAppId = activeYard ? activeYard.id : "default-app-id";
 
   const handleLoginSuccess = (yard) => {
+    if (db && yard.id !== currentAppId) {
+      setLoading(true);
+    }
     setActiveYard(yard);
     setEditingTrailer(null);
     setIsLoginOpen(false);
@@ -66,7 +69,6 @@ function App() {
       return;
     }
 
-    setLoading(true);
     console.log(`App initializing for yard: ${currentAppId}...`);
 
     let unsubscribe = () => {};
@@ -112,19 +114,25 @@ function App() {
     };
   }, [currentAppId]);
 
-  // Pre-calculate occupied spots to prevent trailer overlaps in the fenceLine
+  // Pre-calculate occupied spots dynamically across whichever parkingZones the active yard uses
   const occupiedSpots = useMemo(() => {
     const spots = new Map();
+    const zones = activeYard?.parkingZones || [];
+
     trailers.forEach((t) => {
-      if (t.northFence && t.northFence !== "None") {
-        spots.set(`NF:${t.northFence}`, { id: t.id, number: t.trailerNumber });
-      }
-      if (t.southFence && t.southFence !== "None") {
-        spots.set(`SF:${t.southFence}`, { id: t.id, number: t.trailerNumber });
-      }
+      zones.forEach((zone) => {
+        const spotVal = t[zone.id];
+        if (spotVal && spotVal !== "None") {
+          spots.set(`${zone.shortCode}:${spotVal}`, {
+            id: t.id,
+            number: t.trailerNumber,
+          });
+        }
+      });
     });
+
     return spots;
-  }, [trailers]);
+  }, [trailers, activeYard]);
 
   const handleSave = async (trailerData) => {
     try {
@@ -152,12 +160,13 @@ function App() {
         logTimestamp: serverTimestamp(),
       }).catch((err) => console.warn("Log failed", err));
 
-      const parkingSpot =
-        trailerData.northFence !== "None"
-          ? ` (NF: ${trailerData.northFence})`
-          : trailerData.southFence !== "None"
-            ? ` (SF: ${trailerData.southFence})`
-            : "";
+      // Find whichever parking zone was selected on this yard
+      const activeZone = (activeYard?.parkingZones || []).find(
+        (zone) => trailerData[zone.id] && trailerData[zone.id] !== "None",
+      );
+      const parkingSpot = activeZone
+        ? ` (${activeZone.shortCode}: ${trailerData[activeZone.id]})`
+        : "";
 
       setLastAction(
         `${editingTrailer ? "Updated" : "Entered"}: ${trailerData.trailerNumber}${parkingSpot}`,
@@ -251,6 +260,7 @@ function App() {
             occupiedSpots={occupiedSpots}
             setSearchQuery={setSearchQuery}
             onWarning={setWarning}
+            activeYard={activeYard}
           />
 
           {lastAction && (
@@ -271,6 +281,7 @@ function App() {
             onEdit={setEditingTrailer}
             onDelete={(id, number) => setDeleteId({ id, number })}
             editingTrailer={editingTrailer}
+            activeYard={activeYard}
           />
         </div>
       </div>

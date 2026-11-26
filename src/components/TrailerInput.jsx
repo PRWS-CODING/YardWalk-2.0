@@ -10,7 +10,12 @@ const TrailerInput = ({
   onToggleComments,
   comments,
   onCommentsChange,
+  trailerPrefix = "",
+  trailerLength = null,
 }) => {
+  const placeholderText = trailerPrefix
+    ? `${trailerPrefix}${"X".repeat(Math.max(0, (trailerLength || 6) - trailerPrefix.length))}`
+    : "Enter Trailer #";
   return (
     <>
       <div className="input-group">
@@ -24,7 +29,7 @@ const TrailerInput = ({
             id="trailer-number"
             value={trailerNumber}
             onChange={onNumberChange}
-            placeholder="3XXXXX"
+            placeholder={trailerPrefix}
             inputMode="numeric"
             pattern="[0-9]*"
           />

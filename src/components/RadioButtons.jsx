@@ -1,29 +1,40 @@
 import React, { memo } from "react";
 
-function RadioButtons({ status, onStatusChange }) {
-  const options = ["Empty", "Salvage", "Full"];
+const RadioButtons = ({ radioGroups = [], formData, onRadioChange }) => {
+  if (!radioGroups.length) return null;
 
   return (
-    <div className="radio-button-group">
-      {options.map((option) => (
-        <div className="radio-wrapper" key={option}>
-          <input
-            type="radio"
-            name="status"
-            className="input"
-            id={`value-${option}`}
-            value={option}
-            checked={status === option}
-            onChange={(e) => onStatusChange(e.target.value)}
-          />
-          <div className="btn">
-            <span>{option}</span>
-            <span className="btn__glitch"></span>
+    <>
+      {radioGroups.map((group) => (
+        <div key={group.id} className="category-group">
+          {group.label && (
+            <label className="input-label">{group.label}</label>
+          )}
+          <div className="radio-button-group">
+            {group.options.map((option) => {
+              const inputId = `${group.id}-${option}`;
+              return (
+                <div key={option} className="radio-wrapper">
+                  <input
+                    type="radio"
+                    id={inputId}
+                    className="input"
+                    name={group.id}
+                    value={option}
+                    checked={formData[group.id] === option}
+                    onChange={() => onRadioChange(group.id, option)}
+                  />
+                  <label htmlFor={inputId} className="btn">
+                    {option}
+                  </label>
+                </div>
+              );
+            })}
           </div>
         </div>
       ))}
-    </div>
+    </>
   );
-}
+};
 
 export default memo(RadioButtons);

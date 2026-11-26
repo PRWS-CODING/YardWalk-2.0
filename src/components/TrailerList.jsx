@@ -1,145 +1,154 @@
-import React, { useEffect, useRef, useState, useCallback, memo } from "react";
+import React, { useEffect, useRef, useState, useCallback, memo, useMemo } from "react";
 
 const TrailerList = ({
-  trailers,
-  searchQuery,
+  trailers = [],
+  searchQuery = "",
   onEdit,
   onDelete,
   editingTrailer,
+  activeYard,
 }) => {
-  // 🌟 Dynamic refs to track each category's scrollable container independently
+  // Track each category's scrollable container independently
   const listRefs = useRef({});
   const [expandedCategories, setExpandedCategories] = useState({});
 
-  const categories = [
-    {
-      title: "Needs Fuel",
-      filter: (t) => t.status === "Empty" && t.needsFuel,
-    },
-    {
-      title: "All Salvage Trailers",
-      filter: (t) => t.status === "Salvage",
-    },
-    {
-      title: "All Empty Trailers",
-      filter: (t) => t.status === "Empty" && !t.needsFuel,
-    },
-    { title: "All Pallet Shuttle Trailers", filter: (t) => t.palletShuttle },
-    {
-      title: "All Inbound & Seasonal Trailers",
-      filter: (t) => t.inbound || t.seasonal,
-    },
-    {
+  // Build category accordions dynamically per yard (while keeping Romulus's exact groups)
+  const categories = useMemo(() => {
+    const primaryGroup = activeYard?.radioGroups?.[0];
+    const primaryField = primaryGroup?.id || "status";
+    const checkboxes = activeYard?.checkboxes || [];
+
+    const isRomulus =
+      !activeYard ||
+      activeYard.id === "default-app-id" ||
+      (primaryGroup?.options?.includes("Salvage") &&
+        checkboxes.some((b) => b.id === "needsFuel"));
+
+    if (isRomulus) {
+      return [
+        {
+          title: "Needs Fuel",
+          filter: (t) =>
+            (t[primaryField] ?? t.status) === "Empty" && Boolean(t.needsFuel),
+        },
+        {
+          title: "All Salvage Trailers",
+          filter: (t) => (t[primaryField] ?? t.status) === "Salvage",
+        },
+        {
+          title: "All Empty Trailers",
+          filter: (t) =>
+            (t[primaryField] ?? t.status) === "Empty" && !t.needsFuel,
+        },
+        {
+          title: "All Pallet Shuttle Trailers",
+          filter: (t) => Boolean(t.palletShuttle),
+        },
+        {
+          title: "All Inbound & Seasonal Trailers",
+          filter: (t) => Boolean(t.inbound || t.seasonal),
+        },
+        {
+          title: "All Trailers",
+          filter: () => true,
+        },
+      ];
+    }
+
+    const dynamicCategories = [];
+
+    (primaryGroup?.options || []).forEach((option) => {
+      dynamicCategories.push({
+        title: `All ${option} Trailers`,
+        filter: (t) => (t[primaryField] ?? t.status) === option,
+      });
+    });
+
+    checkboxes.forEach((box) => {
+      const cleanLabel = box.label.replace(/\?$/, "");
+      dynamicCategories.push({
+        title: cleanLabel,
+        filter: (t) => Boolean(t[box.id]),
+      });
+    });
+
+    dynamicCategories.push({
       title: "All Trailers",
       filter: () => true,
+    });
+
+    return dynamicCategories;
+  }, [activeYard]);
+
+  // Sort trailers in physical yard-walk order using the active yard's parkingZones array
+  const getSortableValue = useCallback(
+    (t) => {
+      const zones = activeYard?.parkingZones || [];
+
+      for (let zIdx = 0; zIdx < zones.length; zIdx++) {
+        const zone = zones[zIdx];
+        const parkedVal = t[zone.id];
+
+        if (parkedVal && parkedVal !== "None") {
+          const spotIndex = zone.spots.findIndex((s) =>
+            typeof s === "string" ? s === parkedVal : s.value === parkedVal,
+          );
+          return [
+            zIdx,
+            spotIndex >= 0 ? spotIndex : 999,
+            parseInt(t.trailerNumber, 10) || 0,
+          ];
+        }
+      }
+
+      // Not parked in any zone
+      return [999, 0, parseInt(t.trailerNumber, 10) || 0];
     },
-  ];
+    [activeYard],
+  );
 
-  const getSortableValue = (t) => {
-    const nf = t.northFence || "None";
-    const sf = t.southFence || "None";
+  const sortedTrailers = useMemo(() => {
+    return [...trailers].sort((a, b) => {
+      const [zoneA, spotA, numA] = getSortableValue(a);
+      const [zoneB, spotB, numB] = getSortableValue(b);
 
-    // 1. North Fence Logic
-    if (nf !== "None") {
-      const parts = nf.split(" ");
-      let group, num;
-      if (parts.length === 1 && !isNaN(parts[0])) {
-        num = parseInt(parts[0], 10);
-        group = num <= 25 ? "NF_NUM_LOW" : "NF_NUM_HIGH";
-      } else {
-        num = parseInt(parts.pop(), 10);
-        group = parts.join(" ");
-      }
-      const sequence = [
-        "TA",
-        "NF_NUM_LOW",
-        "NP",
-        "NF_NUM_HIGH",
-        "Curb",
-        "WT",
-        "B",
-      ];
-      return [0, sequence.indexOf(group), num];
-    }
-
-    // 2. South Fence Logic
-    if (sf !== "None") {
-      const parts = sf.split(" ");
-      let group, num;
-      if (parts.length === 1 && !isNaN(parts[0])) {
-        num = parseInt(parts[0], 10);
-        if (num <= 329) group = "SF_NUM1";
-        else if (num <= 359) group = "SF_NUM2";
-        else group = "SF_NUM3";
-      } else {
-        num = parseInt(parts.pop(), 10);
-        group = parts.join(" ");
-        // Distinguish between the split prefix locations (Bs 1-4 vs Bs 5-13)
-        if (group === "Bs") group = num <= 4 ? "Bs_START" : "Bs_END";
-        if (group === "NPs") group = num === 1 ? "NPs_START" : "NPs_END";
-      }
-      const sequence = [
-        "Bs_START",
-        "SF_NUM1",
-        "NPs_START",
-        "SF_NUM2",
-        "NPs_END",
-        "SF_NUM3",
-        "Bs_END",
-      ];
-      return [1, sequence.indexOf(group), num];
-    }
-
-    // 3. Not Parked (None)
-    return [2, 0, parseInt(t.trailerNumber, 10) || 0];
-  };
-
-  const sortedTrailers = [...trailers].sort((a, b) => {
-    const [sideA, groupA, numA] = getSortableValue(a);
-    const [sideB, groupB, numB] = getSortableValue(b);
-
-    if (sideA !== sideB) return sideA - sideB;
-    if (groupA !== groupB) return groupA - groupB;
-    return numA - numB;
-  });
+      if (zoneA !== zoneB) return zoneA - zoneB;
+      if (spotA !== spotB) return spotA - spotB;
+      return numA - numB;
+    });
+  }, [trailers, getSortableValue]);
 
   const scrollToTrailer = useCallback(() => {
-    if (searchQuery.length === 6) {
-      const element = document.querySelector(
-        `[data-trailer-number="${searchQuery}"]`,
-      );
-      if (element)
-        element.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (!searchQuery) return;
+    const element = document.querySelector(
+      `[data-trailer-number="${searchQuery}"]`,
+    );
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "center" });
     }
-  }, [searchQuery]); // Dependency on searchQuery
+  }, [searchQuery]);
 
   useEffect(() => {
     scrollToTrailer();
-  }, [scrollToTrailer]); // Dependency on memoized scrollToTrailer
+  }, [scrollToTrailer]);
 
   const toggleCategory = useCallback((title) => {
     setExpandedCategories((prev) => ({
       ...prev,
       [title]: !prev[title],
     }));
-  }, []); // No dependencies, as it uses functional update
+  }, []);
 
-  /**
-   * Renders a single trailer item.
-   */
-  const TrailerItem = memo(function TrailerItem({
-    t,
-    categoryTitle,
-    onEdit,
-    onDelete,
-    editingTrailer,
-    searchQuery,
-  }) {
+  const primaryField = activeYard?.radioGroups?.[0]?.id || "status";
+
+  const renderTrailerItem = (t, categoryTitle) => {
+    const primaryStatus = t[primaryField] ?? t.status;
+
     const classNames = [
       "trailer-item",
       t.palletShuttle ? "pallet-shuttle" : "",
       t.palletShuttle
-        ? t.status === "Empty"
+        ? primaryStatus === "Empty"
           ? "pallet-shuttle-empty"
           : "pallet-shuttle-full"
         : t.needsFuel
@@ -150,20 +159,50 @@ const TrailerList = ({
       .filter(Boolean)
       .join(" ");
 
-    // 🌟 Intercept the delete action to capture scroll position before DOM shifts
+    // Intercept delete to lock scroll position before DOM shifts
     const handleLocalDelete = () => {
       const container = listRefs.current[categoryTitle];
       const savedScrollTop = container ? container.scrollTop : 0;
 
       onDelete(t.id, t.trailerNumber);
 
-      // Restore the scroll height immediately on the next animation frame
       if (container) {
         requestAnimationFrame(() => {
           container.scrollTop = savedScrollTop;
         });
       }
     };
+
+    // Build dynamic details line from activeYard config
+    const radioBadges = (activeYard?.radioGroups || []).map(
+      (group, idx) => t[group.id] ?? (idx === 0 ? t.status : null),
+    );
+
+    const checkboxBadges = (activeYard?.checkboxes || []).map((box) =>
+      t[box.id] ? box.label.replace(/\?$/, "") : null,
+    );
+
+    const parkingBadges = (activeYard?.parkingZones || []).map((zone) => {
+      const val = t[zone.id];
+      if (!val || val === "None") return null;
+
+      const matchedSpot = zone.spots.find((s) =>
+        typeof s === "string" ? s === val : s.value === val,
+      );
+      const displaySpot =
+        typeof matchedSpot === "object" ? matchedSpot.label : val;
+
+      return `${zone.shortCode}: ${displaySpot}`;
+    });
+
+    const detailsText = [
+      ...radioBadges,
+      ...checkboxBadges,
+      ...parkingBadges,
+      t.comments ? `Note: ${t.comments}` : null,
+    ]
+      .filter(Boolean)
+      .join(" | ");
 
     return (
       <li
@@ -181,31 +220,15 @@ const TrailerList = ({
             >
               ✎
             </button>
-            <button
-              className="delete-button"
-              onClick={handleLocalDelete} // 👈 Using scroll-locking delete handler
-            >
+            <button className="delete-button" onClick={handleLocalDelete}>
               &times;
             </button>
           </div>
-          <div className="text-sm">
-            {[
-              t.status,
-              t.needsFuel ? "Needs Fuel" : null,
-              t.inbound ? "Inbound" : null,
-              t.seasonal ? "Seasonal" : null,
-              t.palletShuttle ? "Pallet Shuttle" : null,
-              t.northFence !== "None" ? `NF: ${t.northFence}` : null,
-              t.southFence !== "None" ? `SF: ${t.southFence}` : null,
-              t.comments ? `Note: ${t.comments}` : null,
-            ]
-              .filter(Boolean)
-              .join(" | ")}
-          </div>
+          <div className="text-sm">{detailsText}</div>
         </div>
       </li>
     );
-  });
+  };
 
   const renderList = (category) => {
     const list = sortedTrailers
@@ -214,7 +237,6 @@ const TrailerList = ({
 
     if (list.length === 0) return null;
 
-    // Auto-expand if the search matches a trailer in this list, otherwise use toggle state
     const isExpanded =
       expandedCategories[category.title] ||
       (searchQuery.length > 0 &&
@@ -232,20 +254,10 @@ const TrailerList = ({
         {isExpanded && (
           <div
             className="trailer-list-container"
-            ref={(el) => (listRefs.current[category.title] = el)} // 🌟 Sets independent ref for each list container
+            ref={(el) => (listRefs.current[category.title] = el)}
           >
             <ul className="trailer-items-list">
-              {list.map((t) => (
-                <TrailerItem
-                  key={t.id}
-                  t={t}
-                  categoryTitle={category.title} // 👈 Pass category title to identify correct ref
-                  onEdit={onEdit}
-                  onDelete={onDelete}
-                  editingTrailer={editingTrailer}
-                  searchQuery={searchQuery}
-                />
-              ))}
+              {list.map((t) => renderTrailerItem(t, category.title))}
             </ul>
           </div>
         )}
