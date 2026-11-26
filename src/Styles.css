@@ -146,12 +146,14 @@ body {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-around;
-  gap: 1.5rem;
+  gap: .05rem;
   margin: 1.5rem 0;
 }
 
 .checkbox-input {
-  transform: scale(1.1);
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
   accent-color: #2e88a3;
   cursor: pointer;
 }
